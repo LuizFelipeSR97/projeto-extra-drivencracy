@@ -144,14 +144,58 @@ server.get("/poll/:id/choice", async (req,res) => {
 
     try {
 
+        const pollExists = await db.collection("choices").findOne({pollId: id})
+
+        if (!pollExists){
+            res.sendStatus(404)
+            return
+        }
+
         const choicesByPoll = await db.collection("choices").find({pollId: id}).toArray()
 
         res.send(choicesByPoll)
-        return
 
     } catch(err) {
         res.status(500).send(err.message)
     }
+})
+
+// Rota vote
+
+server.post("/choice/:id/vote", async (req,res) => {
+
+    const id = req.params.id;
+
+    try {
+
+        const choiceExists = await db.collection("choices").findOne({"_id": ObjectId(id)})
+
+        if (!choiceExists){
+            res.sendStatus(404)
+            return
+        }
+
+        const pollId = choiceExists.pollId;
+
+        const pollVoted = await db.collection("polls").findOne({_id: ObjectId(pollId)});
+
+        let expirationTime = pollVoted.expireAt;
+        expirationTime = dayjs(expirationTime);
+        let now = dayjs(Date.now());
+
+        if (now>expirationTime){
+            res.sendStatus(403);
+            return
+        }
+
+        db.collection("votes").insertOne({createdAt: dayjs(Date.now()).format("YYYY-MM-DD HH:mm"), choiceId: id})
+
+        res.sendStatus(201)
+
+    } catch(err) {
+        res.status(500).send(err.message)
+    }
+
 })
 
 
