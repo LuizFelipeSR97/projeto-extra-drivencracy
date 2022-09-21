@@ -4,8 +4,10 @@ import dotenv from 'dotenv';
 import express from 'express';
 import {Db, MongoClient} from 'mongodb';
 import joi from 'joi';
+import dayjs from 'dayjs';
 import bcrypt from 'bcrypt';
 import {v4 as uuid} from 'uuid';
+import {ObjectId} from "bson";
 
 dotenv.config();
 
@@ -19,31 +21,17 @@ mongoClient.connect().then(() => {
     db = mongoClient.db("drivencracy")
 });
 
-//Funcao para formatar data
-
-function formatDate(DD,MM,YYYY,HH,mm){
-
-    if (DD<10){
-        DD="0"+DD}
-
-    if (MM<10){
-        MM="0"+MM}
-
-    if (HH<10){
-        HH="0"+HH}
-
-    if (mm<10){
-        mm="0"+mm}
-        
-    return (`${YYYY}-${MM}-${DD} ${HH}:${mm}`)
-}
-
 // Schemas
 
 const pollSchema = joi.object({
-    title: joi.string(),
-    expireAt: joi.string().min(0)
+    title: joi.string().min(1).required(),
+    expireAt: joi.string().min(0).required()
 });
+
+const choiceSchema = joi.object({
+    title: joi.string().min(1).required(),
+    pollId: joi.string().required()
+})
 
 // Rota poll
 
@@ -74,23 +62,10 @@ server.post("/poll", async (req,res) => {
 
     }
 
-    if (pollToSubmit.title===""){
-
-        res.sendStatus(422);
-        return
-
-    }
-
     if (pollToSubmit.expireAt===""){
 
-        let date = new Date();
-        date.setDate(date.getDate() + 30)
-
-        const newDate = formatDate(date.getDate(), date.getMonth()+1, date.getFullYear(), date.getHours(), date.getMinutes())
-
-        pollToSubmit = {...pollToSubmit, expireAt: newDate}
-        res.status(201).send(pollToSubmit)
-        return
+        let date = dayjs(Date.now()).add(30,"day").format("YYYY-MM-DD HH:mm");
+        pollToSubmit={...pollToSubmit, expireAt: date}
     }
 
     try {
@@ -107,9 +82,72 @@ server.post("/poll", async (req,res) => {
 
 // Rota Choice
 
-server.get("/poll/:id/choice", async (req,res) => {
+server.post("/choice", async (req,res) => {
+
+    let choiceToSubmit = req.body
+
+    const validation = choiceSchema.validate(choiceToSubmit, {abortEarly: false})
+
+    if (validation.error){
+
+        const errors = validation.error.details.map(error=>error.message)
+        res.status(422).send(errors)
+        return
+
+    }
 
     try {
+
+        const pollExists = await db.collection("polls").findOne({"_id": ObjectId(choiceToSubmit.pollId)})
+
+        if (!pollExists){
+            res.sendStatus(404)
+            return
+        }
+
+        const choiceExists = await db.collection("choices").findOne({
+            $and: [
+                {"title": choiceToSubmit.title},
+                {"pollId": choiceToSubmit.pollId}
+            ]
+        })
+
+        if (choiceExists){
+            res.sendStatus(409)
+            return
+        }
+
+        let date = pollExists.expireAt
+        date = dayjs(date)
+        let now= dayjs(Date.now())
+
+        if (date<now){
+            res.sendStatus(403);
+            return
+        }
+
+        db.collection("choices").insertOne(choiceToSubmit)
+
+        res.status(201).send(choiceToSubmit)
+
+    } catch(err) {
+
+        res.status(500).send(err.message)
+
+    }
+
+})
+
+server.get("/poll/:id/choice", async (req,res) => {
+
+    const id = req.params.id
+
+    try {
+
+        const choicesByPoll = await db.collection("choices").find({pollId: id}).toArray()
+
+        res.send(choicesByPoll)
+        return
 
     } catch(err) {
         res.status(500).send(err.message)
