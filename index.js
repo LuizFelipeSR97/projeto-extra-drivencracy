@@ -19,6 +19,32 @@ mongoClient.connect().then(() => {
     db = mongoClient.db("drivencracy")
 });
 
+//Funcao para formatar data
+
+function formatDate(DD,MM,YYYY,HH,mm){
+
+    if (DD<10){
+        DD="0"+DD}
+
+    if (MM<10){
+        MM="0"+MM}
+
+    if (HH<10){
+        HH="0"+HH}
+
+    if (mm<10){
+        mm="0"+mm}
+        
+    return (`${YYYY}-${MM}-${DD} ${HH}:${mm}`)
+}
+
+// Schemas
+
+const pollSchema = joi.object({
+    title: joi.string(),
+    expireAt: joi.string().min(0)
+});
+
 // Rota poll
 
 server.get("/poll", async (req,res) => {
@@ -37,14 +63,34 @@ server.get("/poll", async (req,res) => {
 
 server.post("/poll", async (req,res) => {
 
-    const pollToSubmit = req.body;
+    let pollToSubmit = req.body;
+    const validation = pollSchema.validate(pollToSubmit, {abortEarly: false});
+
+    if (validation.error) {
+
+        const errors = validation.error.details.map(det => det.message);
+        res.status(422).send(errors);
+        return
+
+    }
 
     if (pollToSubmit.title===""){
-        res.sendStatus(422)
+
+        res.sendStatus(422);
+        return
+
     }
+
     if (pollToSubmit.expireAt===""){
-        // Pegar a data de hoje e acrescentar 30 dias
-        // Fazer pollToSubmit===[...pollToSubmit, expireAt: "ESSA NOVA DATA"]
+
+        let date = new Date();
+        date.setDate(date.getDate() + 30)
+
+        const newDate = formatDate(date.getDate(), date.getMonth()+1, date.getFullYear(), date.getHours(), date.getMinutes())
+
+        pollToSubmit = {...pollToSubmit, expireAt: newDate}
+        res.status(201).send(pollToSubmit)
+        return
     }
 
     try {
@@ -69,6 +115,7 @@ server.get("/poll/:id/choice", async (req,res) => {
         res.status(500).send(err.message)
     }
 })
+
 
 server.listen(process.env.PORT, ()=>{
 
