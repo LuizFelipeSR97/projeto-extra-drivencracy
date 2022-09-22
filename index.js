@@ -1,13 +1,12 @@
-import axios from "axios";
 import cors from 'cors';
 import dotenv from 'dotenv';
 import express from 'express';
-import {Db, MongoClient} from 'mongodb';
+import {MongoClient} from 'mongodb';
 import joi from 'joi';
 import dayjs from 'dayjs';
-import bcrypt from 'bcrypt';
-import {v4 as uuid} from 'uuid';
 import {ObjectId} from "bson";
+
+// Configuracoes
 
 dotenv.config();
 
@@ -108,7 +107,7 @@ server.post("/choice", async (req,res) => {
         const choiceExists = await db.collection("choices").findOne({
             $and: [
                 {"title": choiceToSubmit.title},
-                {"pollId": choiceToSubmit.pollId}
+                {"pollId": ObjectId(choiceToSubmit.pollId)}
             ]
         })
 
@@ -126,6 +125,8 @@ server.post("/choice", async (req,res) => {
             return
         }
 
+        choiceToSubmit={...choiceToSubmit, pollId: ObjectId(choiceToSubmit.pollId)}
+
         db.collection("choices").insertOne(choiceToSubmit)
 
         res.status(201).send(choiceToSubmit)
@@ -140,7 +141,7 @@ server.post("/choice", async (req,res) => {
 
 server.get("/poll/:id/choice", async (req,res) => {
 
-    const id = req.params.id
+    const id = ObjectId(req.params.id)
 
     try {
 
@@ -164,11 +165,11 @@ server.get("/poll/:id/choice", async (req,res) => {
 
 server.post("/choice/:id/vote", async (req,res) => {
 
-    const id = req.params.id;
+    const id = ObjectId(req.params.id);
 
     try {
 
-        const choiceExists = await db.collection("choices").findOne({"_id": ObjectId(id)})
+        const choiceExists = await db.collection("choices").findOne({"_id": id})
 
         if (!choiceExists){
             res.sendStatus(404)
@@ -177,7 +178,7 @@ server.post("/choice/:id/vote", async (req,res) => {
 
         const pollId = choiceExists.pollId;
 
-        const pollVoted = await db.collection("polls").findOne({_id: ObjectId(pollId)});
+        const pollVoted = await db.collection("polls").findOne({_id: pollId});
 
         let expirationTime = pollVoted.expireAt;
         expirationTime = dayjs(expirationTime);
@@ -196,6 +197,68 @@ server.post("/choice/:id/vote", async (req,res) => {
         res.status(500).send(err.message)
     }
 
+})
+
+// Rota result
+
+server.get("/poll/:id/result", async (req,res) => {
+
+    const id = ObjectId(req.params.id)
+    let array=[];
+
+    try {
+
+        const pollExists = await db.collection("polls").findOne({_id: id})
+
+        if (!pollExists){
+            res.sendStatus(404)
+            return
+        }
+
+        let pollChoices = await db.collection("choices").find({pollId: id}).toArray()
+
+        // Obter numero de votos pra poll escolhida
+
+        for (let i=0; i<pollChoices.length; i++){
+            let votes = await db.collection("votes").find({choiceId: pollChoices[i]._id}).toArray()
+            array.push(await votes.length)
+        }
+
+        let countResults = await pollChoices.map(ch => {
+            return {choiceId: ch._id, votes: 0}
+        })
+
+        countResults.map((opt, i) => {
+            opt.votes=array[i]
+        })
+
+        // Pegar so o maior:
+
+        countResults.sort((a,b) => {
+            return (
+                (a.votes>b.votes) ? (-1) : (false)            
+            )})
+        
+        let winnerOption = countResults[0]
+        let optionChosen = pollChoices.filter(ch => {
+            return (ch._id===winnerOption.choiceId)
+        })[0].title
+
+        let modeloResposta = {
+            title: pollExists.title,
+            expireAt: pollExists.expireAt,
+            result:
+                {
+                    title: optionChosen,
+                    votes: winnerOption.votes
+                }
+        }
+
+        res.send(modeloResposta)
+
+    } catch(err) {
+        res.status(500).send(err.message)
+    }
 })
 
 
