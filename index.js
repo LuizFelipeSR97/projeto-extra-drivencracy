@@ -232,7 +232,7 @@ server.get("/poll/:id/result", async (req,res) => {
             opt.votes=array[i]
         })
 
-        // Pegar so o maior:
+        // Pegar so o com mais votos:
 
         countResults.sort((a,b) => {
             return (
