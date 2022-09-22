@@ -244,7 +244,8 @@ server.get("/poll/:id/result", async (req,res) => {
             return (ch._id===winnerOption.choiceId)
         })[0].title
 
-        let modeloResposta = {
+        let answer = {
+            _id: pollExists._id,
             title: pollExists.title,
             expireAt: pollExists.expireAt,
             result:
@@ -254,7 +255,7 @@ server.get("/poll/:id/result", async (req,res) => {
                 }
         }
 
-        res.send(modeloResposta)
+        res.send(answer)
 
     } catch(err) {
         res.status(500).send(err.message)
