@@ -1,6 +1,7 @@
 import db from '../db/db.js';
 import dayjs from 'dayjs';
 import {ObjectId} from "bson";
+import { STATUS_CODE } from '../enums/statusCode.js';
 
 async function postVote(req, res){
 
@@ -11,7 +12,7 @@ async function postVote(req, res){
         const choiceExists = await db.collection("choices").findOne({"_id": id})
 
         if (!choiceExists){
-            res.sendStatus(404)
+            res.sendStatus(STATUS_CODE.NOT_FOUND)
             return
         }
 
@@ -24,16 +25,16 @@ async function postVote(req, res){
         let now = dayjs(Date.now());
 
         if (now>expirationTime){
-            res.sendStatus(403);
+            res.sendStatus(STATUS_CODE.FORBIDDEN);
             return
         }
 
         db.collection("votes").insertOne({createdAt: dayjs(Date.now()).format("YYYY-MM-DD HH:mm"), choiceId: id})
 
-        res.sendStatus(201)
+        res.sendStatus(STATUS_CODE.CREATED)
 
     } catch(err) {
-        res.status(500).send(err.message)
+        res.status(STATUS_CODE.SERVER_ERROR).send(err.message)
     }
     
 

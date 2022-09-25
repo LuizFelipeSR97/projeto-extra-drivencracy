@@ -1,5 +1,6 @@
 import db from '../db/db.js';
 import {ObjectId} from "bson";
+import { STATUS_CODE } from '../enums/statusCode.js';
 
 async function getResult(req, res){
 
@@ -11,7 +12,7 @@ async function getResult(req, res){
         const pollExists = await db.collection("polls").findOne({_id: id})
 
         if (!pollExists){
-            res.sendStatus(404)
+            res.sendStatus(STATUS_CODE.NOT_FOUND)
             return
         }
 
@@ -58,7 +59,7 @@ async function getResult(req, res){
         res.send(answer)
 
     } catch(err) {
-        res.status(500).send(err.message)
+        res.status(STATUS_CODE.SERVER_ERROR).send(err.message)
     }
 
 }

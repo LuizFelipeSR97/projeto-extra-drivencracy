@@ -1,12 +1,10 @@
 import cors from 'cors';
 import dotenv from 'dotenv';
 import express from 'express';
-import getPolls from './routes/getPollRoute.js';
-import postPoll from './routes/postPollRoute.js';
-import getChoices from './routes/getChoiceRoute.js';
-import postChoice from './routes/postChoiceRoute.js';
-import postVote from './routes/postVoteRoute.js';
-import getResult from './routes/getResultRoute.js';
+import {getPolls, postPoll} from './routes/pollsRoute.js';
+import {getChoices, postChoice} from './routes/choicesRoute.js';
+import postVote from './routes/voteRoute.js';
+import getResult from './routes/resultRoute.js';
 
 // Configuracoes
 

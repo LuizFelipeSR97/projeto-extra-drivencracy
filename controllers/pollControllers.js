@@ -1,5 +1,6 @@
-import db from '../db/db.js'
-import dayjs from 'dayjs'
+import db from '../db/db.js';
+import dayjs from 'dayjs';
+import {STATUS_CODE} from '../enums/statusCode.js'
 
 async function getPolls(req, res){
 
@@ -10,7 +11,7 @@ async function getPolls(req, res){
     
     } catch (err) {
     
-        res.status(500).send(err.message)
+        res.status(STATUS_CODE.SERVER_ERROR).send(err.message)
     
     }
 }
@@ -28,11 +29,11 @@ async function postPoll(req,res){
     try {
 
         db.collection("polls").insertOne(pollToSubmit);
-        res.status(201).send(pollToSubmit);
+        res.status(STATUS_CODE.CREATED).send(pollToSubmit);
 
     } catch(err) {
 
-        res.status(500).send(err.message)
+        res.status(STATUS_CODE.SERVER_ERROR).send(err.message)
 
     }
 
