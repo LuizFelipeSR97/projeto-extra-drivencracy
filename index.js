@@ -6,6 +6,9 @@ import joi from 'joi';
 import dayjs from 'dayjs';
 import {ObjectId} from "bson";
 
+import {getPolls, createPoll} from './controllers/pollsController.js';
+import {pollSchema, choiceSchema} from './schemas/postSchemas.js'
+
 // Configuracoes
 
 dotenv.config();
@@ -13,6 +16,8 @@ dotenv.config();
 const server = express();
 server.use(cors());
 server.use(express.json());
+
+server.use(getPolls)
 
 const mongoClient = new MongoClient(process.env.MONGO_URI);
 let db;
@@ -22,7 +27,7 @@ mongoClient.connect().then(() => {
 
 // Schemas
 
-const pollSchema = joi.object({
+/* const pollSchema = joi.object({
     title: joi.string().min(1).required(),
     expireAt: joi.string().min(0).required()
 });
@@ -30,11 +35,13 @@ const pollSchema = joi.object({
 const choiceSchema = joi.object({
     title: joi.string().min(1).required(),
     pollId: joi.string().required()
-})
+}) */
 
 // Rota poll
 
-server.get("/poll", async (req,res) => {
+server.get('/poll', getPolls);
+
+/* server.get("/poll", async (req,res) => {
 
     try {
 
@@ -46,9 +53,9 @@ server.get("/poll", async (req,res) => {
         res.status(500).send(err.message)
 
     }
-})
+}) */
 
-server.post("/poll", async (req,res) => {
+/* server.post("/poll", async (req,res) => {
 
     let pollToSubmit = req.body;
     const validation = pollSchema.validate(pollToSubmit, {abortEarly: false});
@@ -69,15 +76,15 @@ server.post("/poll", async (req,res) => {
 
     try {
 
-        db.collection("polls").insertOne(pollToSubmit);
-        res.status(201).send(pollToSubmit);
+        const pollSubmited = db.collection("polls").insertOne(pollToSubmit);
+        res.status(201).send(pollSubmited);
 
     } catch(err) {
 
         res.status(500).send(err.message)
 
     }
-})
+}) */
 
 // Rota Choice
 
@@ -127,9 +134,9 @@ server.post("/choice", async (req,res) => {
 
         choiceToSubmit={...choiceToSubmit, pollId: ObjectId(choiceToSubmit.pollId)}
 
-        db.collection("choices").insertOne(choiceToSubmit)
+        const choiceSubmited = db.collection("choices").insertOne(choiceToSubmit)
 
-        res.status(201).send(choiceToSubmit)
+        res.status(201).send(choiceSubmited)
 
     } catch(err) {
 
@@ -262,9 +269,13 @@ server.get("/poll/:id/result", async (req,res) => {
     }
 })
 
+// Responses
+
+// 
+
 
 server.listen(process.env.PORT, ()=>{
 
-    console.log(`Server running on port ${5000}`)
+    console.log(`Server running on port ${process.env.PORT}`)
 
 })
