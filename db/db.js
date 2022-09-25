@@ -7,11 +7,11 @@ let db;
 const mongoClient = new MongoClient(process.env.MONGO_URI);
 
 try {
-    await mongoClient.connect();
+    await mongoClient.connect()
 } catch(err) {
     console.log(err)
 }
 
-db = mongoClient.db("drivencracy")
+db = mongoClient.db('drivencracy')
 
 export default db;
